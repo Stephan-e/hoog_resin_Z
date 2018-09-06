@@ -11,7 +11,7 @@ try:
     import Adafruit_DHT
 except:
     import Adafruit_DHT
-    raise ValueError('Failed to import and install Adafruit.')
+    #raise ValueError('Failed to import and install Adafruit.')
 
 
 
