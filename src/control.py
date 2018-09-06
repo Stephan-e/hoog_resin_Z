@@ -10,6 +10,7 @@ try:
     install('Adafruit-DHT==1.3.4')
     import Adafruit_DHT
 except:
+    import Adafruit_DHT
     raise ValueError('Failed to import and install Adafruit.')
 
 
