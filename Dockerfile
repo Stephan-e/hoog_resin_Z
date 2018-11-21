@@ -4,9 +4,15 @@
 # base image
 #============
 # for deployment to RPi2 via Resin.io
-FROM resin/rpi-debian:latest
+# FROM resin/armv7hf-debian:latest	
+
+
+FROM resin/%%RESIN_MACHINE_NAME%%-debian
+
+ENV INITSYSTEM on
 
 ENV READTHEDOCS True
+
 # install python3
 #================
 RUN apt-get update && apt-get install -yq --no-install-recommends \
@@ -22,7 +28,10 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 		git \
 		python3-pip \
 		fswebcam \
-		cron
+		cron 
+
+	# && apt-get clean \
+    # && rm -rf /var/lib/apt/lists/*
 	# && rm -rf /var/lib/apt/lists/* \
 	# cd /tmp/ && git clone https://github.com/adafruit/Adafruit_Python_DHT.git && \
     # cd Adafruit_Python_DHT && python3 setup.py install && \
@@ -48,6 +57,18 @@ COPY src/ /app
 # install dependencies
 #===================
 RUN /venv/bin/pip install -r /app/requirements.txt 
+
+
+# WORKDIR /app
+
+# RUN curl https://api.github.com/repos/resin-io/resin-wifi-connect/releases/latest -s \
+#    | grep -hoP 'browser_download_url": "\K.*%%RESIN_ARCH%%\.tar\.gz' \
+#    | xargs -n1 curl -Ls \
+#    | tar -xvz -C /app
+
+# COPY scripts/start.sh .
+
+# CMD ["bash", "start.sh"]
 
 
 #run the app when the container starts
