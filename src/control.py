@@ -2,6 +2,7 @@ import RPi.GPIO as GPIO
 import time
 import subprocess
 import sys, json
+import time
 
 def install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package])
@@ -37,28 +38,40 @@ vent_pin = 14
 
 #GPIO.setup(gpioList2, GPIO.IN)
 
+
+def measure(pin):
+    return Adafruit_DHT.read(Adafruit_DHT.DHT22, pin)
+
 def set_status(pin,status):
     GPIO.output(pin, status)
     return GPIO.input(pin)
 
-def get_status(pin,status):
-    return GPIO.input(pin)
+def get_status(pin):
+    status = GPIO.input(pin)
+    if status == 1:
+        return True
+    elif status == 0: 
+        return False
 
 def get_temp(pin):
-    humidity, temperature = Adafruit_DHT.read(Adafruit_DHT.DHT22, pin)
-    
-    if humidity is not None and temperature is not None:
-        return temperature
-    else:
-        return 0  
+    timeout = time.time() + 1
+    while True:
+        humidity, temperature = measure(pin)
+        if temperature is not None and temperature is not None or time.time() > timeout:
+            break
+        
+    temp = round(temperature,2)
+    return temp
 
 def get_humid(pin):
-    humidity, temperature = Adafruit_DHT.read(Adafruit_DHT.DHT22, pin)
-    
-    if humidity is not None and temperature is not None:
-        return humidity
-    else:
-        return 0        
+    timeout = time.time() + 1  
+    while True:
+        humidity, temperature = measure(pin)
+        if temperature is not None and temperature is not None or time.time() > timeout:
+            break
+
+    hum = round(humidity,2)
+    return hum     
 
 def get_hour(pin, state):
 

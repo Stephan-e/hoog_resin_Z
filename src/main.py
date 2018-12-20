@@ -3,14 +3,14 @@ import json
 from flask import Flask, request, flash, url_for, redirect, \
      render_template, jsonify, Response, send_file
 
-from control import set_status, get_temp, get_humid, get_hour 
+from control import set_status, get_status, get_temp, get_humid, get_hour 
 import RPi.GPIO as GPIO
 
 #from camera_pi import Camera
-from camera_pi import save_image
+from camera_pi import save_image, save_thumbnail_image
 from celery import Celery
 from picamera import PiCamera
-
+from flask_cors import CORS
 import requests
 
 from datetime import timedelta, datetime
@@ -23,6 +23,8 @@ content_type_json = {'Content-Type': 'text/css; charset=utf-8'}
 app.config['DEBUG'] = False
 app.config['SECRET_KEY'] = 'super-secret'
 app.config['SECURITY_PASSWORD_SALT'] = 'salt'
+CORS(app, resources={r"/*": {"origins": "*"}}, send_wildcard=True)
+
  
 water_pin = 17
 COB_pin = 18
@@ -60,10 +62,10 @@ app.config['CELERYBEAT_SCHEDULE'] = {
         'task': 'tasks.turn_vent_off',
         'schedule': crontab(hour=get_hour(vent_pin, False), minute=0)
     },
-    'measurements': {
-        'task': 'tasks.measurements',
-        'schedule': crontab(hour='*', minute=0)
-    }
+    # 'measurements': {
+    #     'task': 'tasks.measurements',
+    #     'schedule': crontab(hour='*', minute=0)
+    # }
 }
 
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
@@ -180,20 +182,23 @@ def get_measurements():
     )  
 
 @app.route('/status')
-def get_status():
+def get_stats():
     humidity = get_humid(temp_hum_pin)
     temperature = get_temp(temp_hum_pin)
+    
     with open('schedule.json') as f:
             data = json.load(f)
-
-    return jsonify(
-        vent=GPIO.input(vent_pin),
-        light=GPIO.input(COB_pin),
-        water=GPIO.input(water_pin),
+    response = jsonify(
+        vent=get_status(vent_pin),
+        light=get_status(COB_pin),
+        water=get_status(water_pin),
         humidity=humidity,
         temperature=temperature,
-        schedule=data
+        schedule=data,
     )  
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    #response.body.add(image)
+    return response
 
 @app.route('/schedule', methods = ['POST', 'GET'])
 def post_schedule():
@@ -207,12 +212,6 @@ def post_schedule():
         with open('schedule.json') as f:
             data = json.load(f)
         return jsonify(data)
-
-@app.route('/show')
-def show_all():
-    with open('schedule.json') as f:
-        data = json.load(f)
-    return jsonify(data)
 
 @app.route('/temperature')
 def get_temperature():
@@ -235,13 +234,17 @@ def get_humidity():
 
 @app.route('/snapshot')
 def snapshot():
-    return send_file(save_image())
+    response = send_file(save_image())
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 @app.route("/snapshot2")
 def getImage():
-     camera.capture(lastfile)
-     camera.close()
-     return send_file(lastfile)
+    response = send_file(save_thumbnail_image(),
+                        attachment_filename='logo.png',
+                        mimetype='image/png')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 # @app.route('/create_user')
 # def create_user():
